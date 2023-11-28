@@ -7,14 +7,17 @@ import {CErc20Delegate} from "../contracts/CErc20Delegate.sol";
 import {WhitePaperInterestRateModel} from "../contracts/WhitePaperInterestRateModel.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {BearToken} from "../contracts/BearToken.sol";
-import {ComptrollerInterface} from "../contracts/ComptrollerInterface.sol";
 import {ComptrollerG7} from "../contracts/ComptrollerG7.sol";
+import {SimplePriceOracle} from "../contracts/SimplePriceOracle.sol";
+import {Unitroller} from "../contracts/Unitroller.sol";
 
 contract HW1Script is Script {
     ERC20 token;
-    ComptrollerInterface comptroller;
+    ComptrollerG7 comptroller;
     CErc20Delegate impl;
     WhitePaperInterestRateModel model;
+    Unitroller unitroller;
+    SimplePriceOracle oracle;
 
     function run() public {
         vm.startBroadcast();
@@ -23,6 +26,9 @@ contract HW1Script is Script {
         impl = new CErc20Delegate();
         model = new WhitePaperInterestRateModel(0, 0);
         comptroller = new ComptrollerG7();
+        unitroller = new Unitroller();
+
+        comptroller._setPriceOracle(oracle);
 
         new CErc20Delegator(
             address(token),
