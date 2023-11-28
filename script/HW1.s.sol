@@ -34,7 +34,7 @@ contract HW1Script is Script {
             address(token),
             comptroller,
             model,
-            1,
+            1e18,
             "Compound Bear Token",
             "cBear",
             18,
