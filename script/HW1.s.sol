@@ -68,7 +68,9 @@ contract HW1Script is Script {
         comptroller._supportMarket(CToken(address(cTokenB)));
 
         comptroller._setPriceOracle(oracle);
-        oracle.setUnderlyingPrice(CToken(address(cTokenA)), 1);
-        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 100);
+        oracle.setUnderlyingPrice(CToken(address(cTokenA)), 1e18);
+        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e16);
+
+        comptroller._setCollateralFactor(CToken(address(cTokenA)), 5e17);
     }
 }
