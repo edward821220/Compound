@@ -67,10 +67,13 @@ contract HW1Script is Script {
         comptroller._supportMarket(CToken(address(cTokenA)));
         comptroller._supportMarket(CToken(address(cTokenB)));
 
+        // Compound V2 文件上面寫：The price of the asset in USD as an unsigned integer scaled up by 10 ^ (36 - underlying asset decimals). E.g. WBTC has 8 decimal places, so the return value is scaled up by 1e28.
         comptroller._setPriceOracle(oracle);
+        // 設定 cTokenA 為 1 USD
         oracle.setUnderlyingPrice(CToken(address(cTokenA)), 1e18);
-        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e16);
+        // 設定 cTokenB 為 100 USD
+        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e20);
 
-        comptroller._setCollateralFactor(CToken(address(cTokenA)), 5e17);
+        comptroller._setCollateralFactor(CToken(address(cTokenB)), 5e17);
     }
 }
