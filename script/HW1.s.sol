@@ -27,6 +27,7 @@ contract HW1Script is Script {
         model = new WhitePaperInterestRateModel(0, 0);
         comptroller = new ComptrollerG7();
         unitroller = new Unitroller();
+        oracle = new SimplePriceOracle();
 
         comptroller._setPriceOracle(oracle);
 
