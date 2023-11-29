@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console2} from "forge-std/Script.sol";
+import {CToken} from "../contracts/CToken.sol";
 import {CErc20Delegator} from "../contracts/CErc20Delegator.sol";
 import {CErc20Delegate} from "../contracts/CErc20Delegate.sol";
 import {WhitePaperInterestRateModel} from "../contracts/WhitePaperInterestRateModel.sol";
@@ -14,6 +15,7 @@ import {Unitroller} from "../contracts/Unitroller.sol";
 contract HW1Script is Script {
     ERC20 token;
     ComptrollerG7 comptroller;
+    CErc20Delegator cToken;
     CErc20Delegate impl;
     WhitePaperInterestRateModel model;
     Unitroller unitroller;
@@ -28,9 +30,7 @@ contract HW1Script is Script {
         comptroller = new ComptrollerG7();
         unitroller = new Unitroller();
 
-        comptroller._setPriceOracle(oracle);
-
-        new CErc20Delegator(
+        cToken = new CErc20Delegator(
             address(token),
             comptroller,
             model,
@@ -42,6 +42,9 @@ contract HW1Script is Script {
             address(impl),
             new bytes(0)
         );
+
+        comptroller._setPriceOracle(oracle);
+        comptroller._supportMarket(CToken(address(cToken)));
 
         vm.stopBroadcast();
     }
