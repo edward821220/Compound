@@ -8,6 +8,7 @@ contract HW2Test is Test, HW1Script {
     address admin = makeAddr("Admin");
     address user1 = makeAddr("User1");
     address user2 = makeAddr("User2");
+    address user3 = makeAddr("User3");
     uint256 initialBalance = 100 ether;
 
     function setUp() public {
@@ -16,8 +17,10 @@ contract HW2Test is Test, HW1Script {
         vm.stopPrank();
         deal(address(tokenA), user1, initialBalance);
         deal(address(tokenA), user2, initialBalance);
+        deal(address(tokenA), user3, initialBalance);
         deal(address(tokenB), user1, initialBalance);
         deal(address(tokenB), user2, initialBalance);
+        deal(address(tokenB), user3, initialBalance);
     }
 
     function testMintAndRedeem() public {
@@ -36,8 +39,56 @@ contract HW2Test is Test, HW1Script {
     }
 
     function testBorrowAndRepay() public {
-        // 先用 User2 提供 tokenA 到池子裡讓 User1 有東西借
+        _borrow();
+
+        vm.startPrank(user1);
+        tokenA.approve(address(cTokenA), type(uint256).max);
+        cTokenA.repayBorrow(50 ether);
+        assertEq(tokenA.balanceOf(user1), initialBalance);
+        vm.stopPrank();
+    }
+
+    function testBorrowAndLiquidate1() public {
+        _borrow();
+
+        // 降低 cTokenB 的 Collateral factor (50% => 20%)
+        vm.prank(admin);
+        comptroller._setCollateralFactor(CToken(address(cTokenB)), 2e17);
+
+        // 用 User2 來清算 User1
         vm.startPrank(user2);
+        tokenA.approve(address(cTokenA), type(uint256).max);
+
+        // 先看 User1 欠了多少 tokenA
+        (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
+        // 因為 Close Factor 設 100%，所以可以幫他全還
+        cTokenA.liquidateBorrow(user1, shortfall, cTokenB);
+        assertEq(tokenA.balanceOf(user2), initialBalance - shortfall);
+        vm.stopPrank();
+    }
+
+    function testBorrowAndLiquidate2() public {
+        _borrow();
+
+        // 降低 cTokenB 的價格 (100USD => 10USD)
+        vm.prank(admin);
+        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e19);
+
+        // 用 User2 來清算 User1
+        vm.startPrank(user2);
+        tokenA.approve(address(cTokenA), type(uint256).max);
+
+        // 先看 User1 欠了多少 tokenA
+        (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
+        // 因為 Close Factor 設 100%，所以可以幫他全還
+        cTokenA.liquidateBorrow(user1, shortfall, cTokenB);
+        assertEq(tokenA.balanceOf(user2), initialBalance - shortfall);
+        vm.stopPrank();
+    }
+
+    function _borrow() private {
+        // 先用 User3 提供 tokenA 到池子裡讓 User1 有東西借
+        vm.startPrank(user3);
         tokenA.approve(address(cTokenA), type(uint256).max);
         cTokenA.mint(100 ether);
         vm.stopPrank();
@@ -53,14 +104,6 @@ contract HW2Test is Test, HW1Script {
         comptroller.enterMarkets(cTokens);
         cTokenA.borrow(50 ether);
         assertEq(tokenA.balanceOf(user1), initialBalance + 50 ether);
-        vm.stopPrank();
-
-        // 降低 cTokenB 的 Collateral factor (50% => 20%)
-        vm.prank(admin);
-        comptroller._setCollateralFactor(CToken(address(cTokenB)), 2e17);
-
-        // 用 User2 來清算 User1
-        vm.startPrank(user2);
         vm.stopPrank();
     }
 }
