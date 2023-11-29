@@ -29,4 +29,13 @@ contract HW2Test is Test, HW1Script {
 
         vm.stopPrank();
     }
+
+    function testBorrowAndRepay() public {
+        vm.startPrank(user1);
+
+        tokenA.approve(address(cTokenA), type(uint256).max);
+        cTokenA.mint(100 ether);
+
+        vm.stopPrank();
+    }
 }

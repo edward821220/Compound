@@ -36,6 +36,7 @@ contract HW1Script is Script {
         model = new WhitePaperInterestRateModel(0, 0);
         comptroller = new ComptrollerG7();
         unitroller = new Unitroller();
+        oracle = new SimplePriceOracle();
 
         cTokenA = new CErc20Delegator(
             address(tokenA),
@@ -51,7 +52,7 @@ contract HW1Script is Script {
         );
 
         cTokenB = new CErc20Delegator(
-            address(tokenA),
+            address(tokenB),
             comptroller,
             model,
             1e18,
@@ -63,8 +64,11 @@ contract HW1Script is Script {
             new bytes(0)
         );
 
-        comptroller._setPriceOracle(oracle);
         comptroller._supportMarket(CToken(address(cTokenA)));
         comptroller._supportMarket(CToken(address(cTokenB)));
+
+        comptroller._setPriceOracle(oracle);
+        oracle.setUnderlyingPrice(CToken(address(cTokenA)), 1);
+        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 100);
     }
 }
