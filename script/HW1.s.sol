@@ -75,7 +75,7 @@ contract HW1Script is Script {
         oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e20);
 
         comptroller._setCollateralFactor(CToken(address(cTokenB)), 5e17);
-        comptroller._setCloseFactor(1e18);
-        comptroller._setLiquidationIncentive(1e17);
+        comptroller._setCloseFactor(5e17);
+        comptroller._setLiquidationIncentive(1.08 * 1e18);
     }
 }
