@@ -64,8 +64,11 @@ contract HW2Test is Test, HW1Script {
         // 因為 Close Factor 設 100%，所以可以幫他全還
         cTokenA.liquidateBorrow(user1, shortfall, cTokenB);
         assertEq(tokenA.balanceOf(user2), initialBalance - shortfall);
-        // 拿到清算獎勵
-        assertGe(cTokenB.balanceOf(user2), 0);
+        // 計算可以拿到多少獎勵
+        (, uint256 seizeTokens) =
+            comptroller.liquidateCalculateSeizeTokens(address(cTokenA), address(cTokenB), shortfall);
+        // 最後拿到的清算獎勵要扣掉給協議的部份
+        assertEq(cTokenB.balanceOf(user2), seizeTokens * (1e18 - cTokenA.protocolSeizeShareMantissa()) / 1e18);
         vm.stopPrank();
     }
 
@@ -85,8 +88,11 @@ contract HW2Test is Test, HW1Script {
         // 因為 Close Factor 設 100%，所以可以幫他全還
         cTokenA.liquidateBorrow(user1, shortfall, cTokenB);
         assertEq(tokenA.balanceOf(user2), initialBalance - shortfall);
-        // 拿到清算獎勵
-        assertGe(cTokenB.balanceOf(user2), 0);
+        // 計算可以拿到多少獎勵
+        (, uint256 seizeTokens) =
+            comptroller.liquidateCalculateSeizeTokens(address(cTokenA), address(cTokenB), shortfall);
+        // 最後拿到的清算獎勵要扣掉給協議的部份
+        assertEq(cTokenB.balanceOf(user2), seizeTokens * (1e18 - cTokenA.protocolSeizeShareMantissa()) / 1e18);
         vm.stopPrank();
     }
 
