@@ -76,6 +76,6 @@ contract HW1Script is Script {
 
         comptroller._setCollateralFactor(CToken(address(cTokenB)), 5e17);
         comptroller._setCloseFactor(1e18);
-        comptroller._setLiquidationIncentive(1e17);
+        comptroller._setLiquidationIncentive(1.08 * 1e18);
     }
 }

@@ -45,7 +45,7 @@ contract HW3Test is Test {
             address(USDC),
             comptroller,
             model,
-            1e18,
+            1e6,
             "Compound USDC",
             "cUSDC",
             18,
@@ -65,10 +65,12 @@ contract HW3Test is Test {
             address(impl),
             new bytes(0)
         );
+        comptroller._supportMarket(CToken(address(cUSDC)));
+        comptroller._supportMarket(CToken(address(cUNI)));
         // Close factor 設定為 50%
         comptroller._setCloseFactor(5e17);
         // Liquidation incentive 設為 8%
-        comptroller._setLiquidationIncentive(8e16);
+        comptroller._setLiquidationIncentive(1.08 * 1e18);
         // 在 Oracle 中設定 USDC 的價格為 $1，UNI 的價格為 $5
         comptroller._setPriceOracle(oracle);
         oracle.setUnderlyingPrice(CToken(address(cUSDC)), 1e30);
@@ -101,7 +103,7 @@ contract HW3Test is Test {
         address[] memory cTokens = new address[](1);
         cTokens[0] = address(cUNI);
         comptroller.enterMarkets(cTokens);
-        // cUSDC.borrow(2500 * 1e6);
+        cUSDC.borrow(2500 * 1e6);
         vm.stopPrank();
         // * 將 UNI 價格改為 $4 使 User1 產生 Shortfall，並讓 User2 透過 AAVE 的 Flash loan 來借錢清算 User1
         // * 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
