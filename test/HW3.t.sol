@@ -82,10 +82,8 @@ contract HW3Test is Test {
         vm.stopPrank();
 
         deal(address(USDC), user1, initialUSDC);
-        deal(address(USDC), user2, initialUSDC);
         deal(address(USDC), user3, initialUSDC);
         deal(address(UNI), user1, initialUNI);
-        deal(address(UNI), user2, initialUNI);
         deal(address(UNI), user3, initialUNI);
     }
 
@@ -99,13 +97,26 @@ contract HW3Test is Test {
         // * User1 使用 1000 顆 UNI 作為抵押品借出 2500 顆 USDC
         vm.startPrank(user1);
         UNI.approve(address(cUNI), initialUNI);
-        cUNI.mint(initialUNI);
+        cUNI.mint(1000 * 1e18);
         address[] memory cTokens = new address[](1);
         cTokens[0] = address(cUNI);
         comptroller.enterMarkets(cTokens);
         cUSDC.borrow(2500 * 1e6);
+        assertEq(USDC.balanceOf(user1), initialUSDC + 2500 * 1e6);
         vm.stopPrank();
+
         // * 將 UNI 價格改為 $4 使 User1 產生 Shortfall，並讓 User2 透過 AAVE 的 Flash loan 來借錢清算 User1
+        oracle.setUnderlyingPrice(CToken(address(cUNI)), 4e18);
+        (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
+        console2.log(shortfall);
+
+        vm.startPrank(user2);
+        USDC.approve(address(cUSDC), type(uint256).max);
+
+        cUSDC.liquidateBorrow(user1, shortfall / 2, cUNI);
+        vm.stopPrank();
+
         // * 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
+        console2.log(USDC.balanceOf(user2));
     }
 }
