@@ -61,12 +61,12 @@ contract HW2Test is Test, HW1Script {
 
         // 先看 User1 欠了多少 tokenA
         (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
-        // 因為 Close Factor 設 100%，所以可以幫他全還
-        cTokenA.liquidateBorrow(user1, shortfall, cTokenB);
-        assertEq(tokenA.balanceOf(user2), initialBalance - shortfall);
+        // 因為 Close Factor 設 50%，所以最多可以幫還一半
+        cTokenA.liquidateBorrow(user1, shortfall / 2, cTokenB);
+        assertEq(tokenA.balanceOf(user2), initialBalance - shortfall / 2);
         // 計算可以拿到多少獎勵
         (, uint256 seizeTokens) =
-            comptroller.liquidateCalculateSeizeTokens(address(cTokenA), address(cTokenB), shortfall);
+            comptroller.liquidateCalculateSeizeTokens(address(cTokenA), address(cTokenB), shortfall / 2);
         // 最後拿到的清算獎勵要扣掉給協議的部份
         assertEq(cTokenB.balanceOf(user2), seizeTokens * (1e18 - cTokenA.protocolSeizeShareMantissa()) / 1e18);
         vm.stopPrank();
@@ -75,9 +75,9 @@ contract HW2Test is Test, HW1Script {
     function testBorrowAndLiquidate2() public {
         _borrow();
 
-        // 降低 cTokenB 的價格 (100USD => 10USD)
+        // 降低 cTokenB 的價格 (100USD => 50USD)
         vm.prank(admin);
-        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e19);
+        oracle.setUnderlyingPrice(CToken(address(cTokenB)), 5e19);
 
         // 用 User2 來清算 User1
         vm.startPrank(user2);
@@ -86,11 +86,11 @@ contract HW2Test is Test, HW1Script {
         // 先看 User1 欠了多少 tokenA
         (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
         // 因為 Close Factor 設 100%，所以可以幫他全還
-        cTokenA.liquidateBorrow(user1, shortfall, cTokenB);
-        assertEq(tokenA.balanceOf(user2), initialBalance - shortfall);
+        cTokenA.liquidateBorrow(user1, shortfall / 2, cTokenB);
+        assertEq(tokenA.balanceOf(user2), initialBalance - shortfall / 2);
         // 計算可以拿到多少獎勵
         (, uint256 seizeTokens) =
-            comptroller.liquidateCalculateSeizeTokens(address(cTokenA), address(cTokenB), shortfall);
+            comptroller.liquidateCalculateSeizeTokens(address(cTokenA), address(cTokenB), shortfall / 2);
         // 最後拿到的清算獎勵要扣掉給協議的部份
         assertEq(cTokenB.balanceOf(user2), seizeTokens * (1e18 - cTokenA.protocolSeizeShareMantissa()) / 1e18);
         vm.stopPrank();
