@@ -85,7 +85,7 @@ contract HW2Test is Test, HW1Script {
 
         // 先看 User1 欠了多少 tokenA
         (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
-        // 因為 Close Factor 設 100%，所以可以幫他全還
+        // 因為 Close Factor 設 50%，所以最多可以幫還一半
         cTokenA.liquidateBorrow(user1, shortfall / 2, cTokenB);
         assertEq(tokenA.balanceOf(user2), initialBalance - shortfall / 2);
         // 計算可以拿到多少獎勵
