@@ -10,6 +10,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ComptrollerG7} from "../contracts/ComptrollerG7.sol";
 import {SimplePriceOracle} from "../contracts/SimplePriceOracle.sol";
 import {Unitroller} from "../contracts/Unitroller.sol";
+import {FlashLoanLiquidate} from "../contracts/FlashLoanLiquidate.sol";
 
 contract HW3Test is Test {
     // 使用 USDC 以及 UNI 代幣來作為 token A 以及 Token B
@@ -22,6 +23,7 @@ contract HW3Test is Test {
     WhitePaperInterestRateModel model;
     Unitroller unitroller;
     SimplePriceOracle oracle;
+    FlashLoanLiquidate flashLoanLiquidate;
 
     address admin = makeAddr("Admin");
     address user1 = makeAddr("User1");
@@ -79,6 +81,7 @@ contract HW3Test is Test {
         comptroller._setCollateralFactor(CToken(address(cUNI)), 5e17);
         comptroller._supportMarket(CToken(address(cUSDC)));
         comptroller._supportMarket(CToken(address(cUNI)));
+
         vm.stopPrank();
 
         deal(address(USDC), user1, initialUSDC);
@@ -108,12 +111,23 @@ contract HW3Test is Test {
         // * 將 UNI 價格改為 $4 使 User1 產生 Shortfall，並讓 User2 透過 AAVE 的 Flash loan 來借錢清算 User1
         oracle.setUnderlyingPrice(CToken(address(cUNI)), 4e18);
         (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
-        console2.log(shortfall);
+        console2.log("shortfall", shortfall);
+        uint256 borrowBalance = cUSDC.borrowBalanceStored(user1);
+        console2.log("borrowBalance", borrowBalance);
+        // uint256 USDCAmount = shortfall / 1e12;
 
         vm.startPrank(user2);
-        USDC.approve(address(cUSDC), type(uint256).max);
 
-        cUSDC.liquidateBorrow(user1, shortfall / 2, cUNI);
+        // USDC.approve(address(cUSDC), type(uint256).max);
+
+        // flashLoanLiquidate = new FlashLoanLiquidate();
+
+        // bytes memory data = abi.encode(cUSDC, cUNI, user1, USDCAmount / 2);
+
+        // flashLoanLiquidate.requestFlashLoan(address(USDC), USDCAmount / 2, data);
+
+        // flashLoanLiquidate.withdraw();
+
         vm.stopPrank();
 
         // * 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
