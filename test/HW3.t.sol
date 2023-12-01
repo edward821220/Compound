@@ -111,26 +111,25 @@ contract HW3Test is Test {
         // * 將 UNI 價格改為 $4 使 User1 產生 Shortfall，並讓 User2 透過 AAVE 的 Flash loan 來借錢清算 User1
         oracle.setUnderlyingPrice(CToken(address(cUNI)), 4e18);
         (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
-        console2.log("shortfall", shortfall);
-        uint256 borrowBalance = cUSDC.borrowBalanceStored(user1);
-        console2.log("borrowBalance", borrowBalance);
-        // uint256 USDCAmount = shortfall / 1e12;
+        require(shortfall > 0, "no shortfall");
 
         vm.startPrank(user2);
 
-        // USDC.approve(address(cUSDC), type(uint256).max);
+        USDC.approve(address(cUSDC), type(uint256).max);
 
-        // flashLoanLiquidate = new FlashLoanLiquidate();
+        flashLoanLiquidate = new FlashLoanLiquidate();
 
-        // bytes memory data = abi.encode(cUSDC, cUNI, user1, USDCAmount / 2);
+        // Close factor 設定為 50% 所以最多清算 50%
+        uint256 borrowBalance = cUSDC.borrowBalanceStored(user1);
+        bytes memory data = abi.encode(cUSDC, cUNI, user1, borrowBalance / 2);
 
-        // flashLoanLiquidate.requestFlashLoan(address(USDC), USDCAmount / 2, data);
+        flashLoanLiquidate.requestFlashLoan(address(USDC), borrowBalance / 2, data);
 
-        // flashLoanLiquidate.withdraw();
+        flashLoanLiquidate.withdraw();
 
         vm.stopPrank();
 
         // * 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
-        console2.log(USDC.balanceOf(user2));
+        assertGe(USDC.balanceOf(user2), 63 * 1e6);
     }
 }
