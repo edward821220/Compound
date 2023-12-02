@@ -9,12 +9,14 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {BearToken} from "../contracts/BearToken.sol";
 import {ComptrollerG7} from "../contracts/ComptrollerG7.sol";
 import {SimplePriceOracle} from "../contracts/SimplePriceOracle.sol";
+import {Unitroller} from "../contracts/Unitroller.sol";
 
 contract HW1Script is Script {
     ERC20 token;
     ComptrollerG7 comptroller;
     CErc20Delegate impl;
     WhitePaperInterestRateModel model;
+    Unitroller unitroller;
     SimplePriceOracle oracle;
 
     function run() public {
@@ -24,6 +26,7 @@ contract HW1Script is Script {
         impl = new CErc20Delegate();
         model = new WhitePaperInterestRateModel(0, 0);
         comptroller = new ComptrollerG7();
+        unitroller = new Unitroller();
         oracle = new SimplePriceOracle();
 
         comptroller._setPriceOracle(oracle);
