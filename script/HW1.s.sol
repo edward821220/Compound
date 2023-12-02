@@ -38,9 +38,15 @@ contract HW1Script is Script {
         unitroller = new Unitroller();
         oracle = new SimplePriceOracle();
 
+        unitroller._setPendingImplementation(address(comptroller));
+
+        comptroller._become(unitroller);
+
+        ComptrollerG7 comptrollerProxy = ComptrollerG7(address(unitroller));
+
         cTokenA = new CErc20Delegator(
             address(tokenA),
-            comptroller,
+            comptrollerProxy,
             model,
             1e18,
             "Compound Bear TokenA",
@@ -53,7 +59,7 @@ contract HW1Script is Script {
 
         cTokenB = new CErc20Delegator(
             address(tokenB),
-            comptroller,
+            comptrollerProxy,
             model,
             1e18,
             "Compound Bear TokenB",
@@ -64,18 +70,18 @@ contract HW1Script is Script {
             new bytes(0)
         );
 
-        comptroller._supportMarket(CToken(address(cTokenA)));
-        comptroller._supportMarket(CToken(address(cTokenB)));
+        comptrollerProxy._supportMarket(CToken(address(cTokenA)));
+        comptrollerProxy._supportMarket(CToken(address(cTokenB)));
 
         // Compound V2 文件上面寫：The price of the asset in USD as an unsigned integer scaled up by 10 ^ (36 - underlying asset decimals). E.g. WBTC has 8 decimal places, so the return value is scaled up by 1e28.
-        comptroller._setPriceOracle(oracle);
+        comptrollerProxy._setPriceOracle(oracle);
         // 設定 cTokenA 為 1 USD
         oracle.setUnderlyingPrice(CToken(address(cTokenA)), 1e18);
         // 設定 cTokenB 為 100 USD
         oracle.setUnderlyingPrice(CToken(address(cTokenB)), 1e20);
 
-        comptroller._setCollateralFactor(CToken(address(cTokenB)), 5e17);
-        comptroller._setCloseFactor(5e17);
-        comptroller._setLiquidationIncentive(1.08 * 1e18);
+        comptrollerProxy._setCollateralFactor(CToken(address(cTokenB)), 5e17);
+        comptrollerProxy._setCloseFactor(5e17);
+        comptrollerProxy._setLiquidationIncentive(1.08 * 1e18);
     }
 }
