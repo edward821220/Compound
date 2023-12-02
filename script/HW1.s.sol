@@ -29,11 +29,17 @@ contract HW1Script is Script {
         unitroller = new Unitroller();
         oracle = new SimplePriceOracle();
 
-        comptroller._setPriceOracle(oracle);
+        unitroller._setPendingImplementation(address(comptroller));
+
+        comptroller._become(unitroller);
+
+        ComptrollerG7 comptrollerProxy = ComptrollerG7(address(unitroller));
+
+        comptrollerProxy._setPriceOracle(oracle);
 
         new CErc20Delegator(
             address(token),
-            comptroller,
+            comptrollerProxy,
             model,
             1e18,
             "Compound Bear Token",
