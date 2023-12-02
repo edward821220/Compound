@@ -24,6 +24,7 @@ contract HW3Test is Test {
     Unitroller unitroller;
     SimplePriceOracle oracle;
     FlashLoanLiquidate flashLoanLiquidate;
+    ComptrollerG7 comptrollerProxy;
 
     address admin = makeAddr("Admin");
     address user1 = makeAddr("User1");
@@ -42,10 +43,17 @@ contract HW3Test is Test {
         comptroller = new ComptrollerG7();
         unitroller = new Unitroller();
         oracle = new SimplePriceOracle();
+
+        unitroller._setPendingImplementation(address(comptroller));
+
+        comptroller._become(unitroller);
+
+        comptrollerProxy = ComptrollerG7(address(unitroller));
+
         // cERC20 的 decimals 皆為 18，初始 exchangeRate 為 1:1
         cUSDC = new CErc20Delegator(
             address(USDC),
-            comptroller,
+            comptrollerProxy,
             model,
             1e6,
             "Compound USDC",
@@ -57,7 +65,7 @@ contract HW3Test is Test {
         );
         cUNI = new CErc20Delegator(
             address(UNI),
-            comptroller,
+            comptrollerProxy,
             model,
             1e18,
             "Compound UNI",
@@ -67,20 +75,20 @@ contract HW3Test is Test {
             address(impl),
             new bytes(0)
         );
-        comptroller._supportMarket(CToken(address(cUSDC)));
-        comptroller._supportMarket(CToken(address(cUNI)));
+        comptrollerProxy._supportMarket(CToken(address(cUSDC)));
+        comptrollerProxy._supportMarket(CToken(address(cUNI)));
         // Close factor 設定為 50%
-        comptroller._setCloseFactor(5e17);
+        comptrollerProxy._setCloseFactor(5e17);
         // Liquidation incentive 設為 8%
-        comptroller._setLiquidationIncentive(1.08 * 1e18);
+        comptrollerProxy._setLiquidationIncentive(1.08 * 1e18);
         // 在 Oracle 中設定 USDC 的價格為 $1，UNI 的價格為 $5
-        comptroller._setPriceOracle(oracle);
+        comptrollerProxy._setPriceOracle(oracle);
         oracle.setUnderlyingPrice(CToken(address(cUSDC)), 1e30);
         oracle.setUnderlyingPrice(CToken(address(cUNI)), 5e18);
         // 設定 UNI 的 collateral factor 為 50%
-        comptroller._setCollateralFactor(CToken(address(cUNI)), 5e17);
-        comptroller._supportMarket(CToken(address(cUSDC)));
-        comptroller._supportMarket(CToken(address(cUNI)));
+        comptrollerProxy._setCollateralFactor(CToken(address(cUNI)), 5e17);
+        comptrollerProxy._supportMarket(CToken(address(cUSDC)));
+        comptrollerProxy._supportMarket(CToken(address(cUNI)));
 
         vm.stopPrank();
 
@@ -103,14 +111,14 @@ contract HW3Test is Test {
         cUNI.mint(1000 * 1e18);
         address[] memory cTokens = new address[](1);
         cTokens[0] = address(cUNI);
-        comptroller.enterMarkets(cTokens);
+        comptrollerProxy.enterMarkets(cTokens);
         cUSDC.borrow(2500 * 1e6);
         assertEq(USDC.balanceOf(user1), initialUSDC + 2500 * 1e6);
         vm.stopPrank();
 
         // * 將 UNI 價格改為 $4 使 User1 產生 Shortfall，並讓 User2 透過 AAVE 的 Flash loan 來借錢清算 User1
         oracle.setUnderlyingPrice(CToken(address(cUNI)), 4e18);
-        (,, uint256 shortfall) = comptroller.getAccountLiquidity(user1);
+        (,, uint256 shortfall) = comptrollerProxy.getAccountLiquidity(user1);
         require(shortfall > 0, "no shortfall");
 
         vm.startPrank(user2);
