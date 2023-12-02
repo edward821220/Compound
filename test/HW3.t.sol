@@ -91,7 +91,7 @@ contract HW3Test is Test {
     }
 
     function testHW3() public {
-        // User3 先提供流動性讓 User1 有東東可以借
+        // User3 先存 USDC 進去讓 User1 有東東可以借
         vm.startPrank(user3);
         USDC.approve(address(cUSDC), initialUSDC);
         cUSDC.mint(initialUSDC);
@@ -99,7 +99,7 @@ contract HW3Test is Test {
 
         // * User1 使用 1000 顆 UNI 作為抵押品借出 2500 顆 USDC
         vm.startPrank(user1);
-        UNI.approve(address(cUNI), initialUNI);
+        UNI.approve(address(cUNI), type(uint256).max);
         cUNI.mint(1000 * 1e18);
         address[] memory cTokens = new address[](1);
         cTokens[0] = address(cUNI);
@@ -115,21 +115,24 @@ contract HW3Test is Test {
 
         vm.startPrank(user2);
 
-        USDC.approve(address(cUSDC), type(uint256).max);
-
-        flashLoanLiquidate = new FlashLoanLiquidate();
-
-        // Close factor 設定為 50% 所以最多清算 50%
+        // Close factor 設定為 50% 所以最多幫他還 50% 的借款
         uint256 borrowBalance = cUSDC.borrowBalanceStored(user1);
-        bytes memory data = abi.encode(cUSDC, cUNI, user1, borrowBalance / 2);
+        uint256 repalyAmount = borrowBalance / 2;
 
-        flashLoanLiquidate.requestFlashLoan(address(USDC), borrowBalance / 2, data);
+        // 把會用到的變數放到 data
+        bytes memory data = abi.encode(cUSDC, cUNI, user1);
 
-        flashLoanLiquidate.withdraw();
+        // 透過另外寫的合約來執行閃電貸+清算
+        flashLoanLiquidate = new FlashLoanLiquidate();
+        flashLoanLiquidate.requestFlashLoan(address(USDC), repalyAmount, data);
 
-        vm.stopPrank();
+        // 最後從合約領 USDC 出來
+        flashLoanLiquidate.withdraw(address(USDC));
 
         // * 可以自行檢查清算 50% 後是不是大約可以賺 63 USDC
         assertGe(USDC.balanceOf(user2), 63 * 1e6);
+        assertLt(USDC.balanceOf(user2), 64 * 1e6);
+
+        vm.stopPrank();
     }
 }

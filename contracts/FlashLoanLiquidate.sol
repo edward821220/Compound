@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import "forge-std/Test.sol";
-
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {CToken} from "./CToken.sol";
 import {CErc20Delegator} from "./CErc20Delegator.sol";
@@ -33,7 +31,6 @@ interface ISwapRouter {
 }
 
 contract FlashLoanLiquidate {
-    ERC20 USDC = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     ERC20 UNI = ERC20(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
     IPool pool = IPool(0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2);
     ISwapRouter swapRouter = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
@@ -54,17 +51,20 @@ contract FlashLoanLiquidate {
         require(initiator == address(this), "FlashLoanLiquidate: invalid initiator");
         require(msg.sender == address(pool), "FlashLoanLiquidate: invalid sender");
 
-        (CErc20Delegator cUSDC, CErc20Delegator cUNI, address user, uint256 repayAmount) =
-            abi.decode(params, (CErc20Delegator, CErc20Delegator, address, uint256));
+        (CErc20Delegator cUSDC, CErc20Delegator cUNI, address user) =
+            abi.decode(params, (CErc20Delegator, CErc20Delegator, address));
 
-        USDC.approve(address(cUSDC), type(uint256).max);
-        cUSDC.liquidateBorrow(user, repayAmount, cUNI);
+        // 剛剛借的 asset 是 USDC，Approve 後才能 liquidateBorrow
+        ERC20(asset).approve(address(cUSDC), type(uint256).max);
+        // 清算後拿到的獎勵是 cUNI，把他領出來變 UNI
+        cUSDC.liquidateBorrow(user, amount, cUNI);
         cUNI.redeem(cUNI.balanceOf(address(this)));
 
+        // UNI Approve 後 Swap 成 USDC
         UNI.approve(address(swapRouter), type(uint256).max);
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: address(UNI),
-            tokenOut: address(USDC),
+            tokenOut: asset,
             fee: 3000, // 0.3%
             recipient: address(this),
             deadline: block.timestamp,
@@ -74,14 +74,15 @@ contract FlashLoanLiquidate {
         });
         swapRouter.exactInputSingle(swapParams);
 
+        // Approve USDC 給 AAVE Pool 還閃電貸借的錢+手續費
         uint256 amountOwed = amount + premium;
         ERC20(asset).approve(address(pool), amountOwed);
 
         return true;
     }
 
-    function withdraw() external {
+    function withdraw(address token) external {
         require(msg.sender == owner);
-        USDC.transfer(msg.sender, USDC.balanceOf(address(this)));
+        ERC20(token).transfer(msg.sender, ERC20(token).balanceOf(address(this)));
     }
 }
